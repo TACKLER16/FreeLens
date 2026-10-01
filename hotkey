@@ -1,0 +1,67 @@
+import cv2
+import keyboard
+from jarvis import ask_gemini
+from TTS import speak
+import asyncio
+from PIL import ImageFont, ImageDraw, Image
+import numpy as np
+import threading
+import tkinter as tk
+
+cap = cv2.VideoCapture(0)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+def get_question():
+    root = tk.Tk()
+    root.title("Jarvis")
+    root.geometry("400x80")
+    root.attributes('-topmost', True)
+    
+    entry = tk.Entry(root, font=("calibri", 14), width=40)
+    entry.pack(pady=10)
+    entry.focus()
+    
+    question = [""]
+    
+    def submit(event=None):
+        question[0] = entry.get()
+        root.destroy()
+    
+    entry.bind("<Return>", submit)
+    root.mainloop()
+    return question[0]
+
+def analyze(frame, question):
+            global history
+            result, history = ask_gemini(frame, question, history)
+            img_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            draw = ImageDraw.Draw(img_pil)
+            font = ImageFont.truetype(r"D:\JARVIS\sf-pro-display\SFPRODISPLAYBOLD.OTF", 20)
+            draw.text((10, 30), result, font=font, fill=(0, 255, 0))
+    
+            frame = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(speak(result))
+            loop.close()
+            print(result)
+            
+
+    
+    
+history = []
+while True:
+    ret, frame = cap.read()
+    cv2.imshow("Jarvis", frame)
+    cv2.waitKey(1)
+    if keyboard.is_pressed('Y'):
+           question = get_question()
+           thread = threading.Thread(target=analyze, args=(frame, question))
+           thread.start()
+           
+      
+    if keyboard.is_pressed('Q'):
+        break
+cap.release()
+cv2.destroyAllWindows()
